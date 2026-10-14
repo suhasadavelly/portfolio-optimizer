@@ -24,6 +24,7 @@ Originally built in Google Colab.
 
 | Function | Purpose |
 |---|---|
+| `download_prices(tickers, start, end)` | Downloads prices from Yahoo Finance with retries, exponential backoff, ticker validation, and logging. |
 | `calcPerformance(adata, weights)` | Returns annualized mean return and annualized downside deviation for one or more weight sets. |
 | `findWeights(adata, stockNames)` | Computes daily returns for the given tickers and returns the weight vector with the best Sortino ratio out of 5,000 random portfolios. |
 | `testing()` | Runs the year-by-year walk-forward backtest and builds portfolio value series for each strategy. |
@@ -58,9 +59,25 @@ The code was written as notebook cells, so some charts made with `px.line(...)` 
 
 ## Customizing
 
-- **Change the stocks:** edit the ticker string in `yf.download(...)` and the `stockNames` list passed to `findWeights`.
-- **Change the date range:** edit the start and end dates in `yf.download(...)`.
+- **Change the stocks:** edit the ticker string in the `download_prices(...)` calls and the `stockNames` list passed to `findWeights`.
+- **Change the date range:** edit the start and end dates in the `download_prices(...)` calls.
 - **Change the search size:** the number of random portfolios is set in `findWeights` with `np.random.rand(5000, ...)`.
+
+## Error handling and logging
+
+All Yahoo Finance requests go through `download_prices`, which:
+
+- **Retries** failed or empty downloads up to 3 times, waiting 2s, then 4s, between attempts (exponential backoff) to ride out rate limits and network errors.
+- **Validates tickers:** raises a clear `ValueError` if any symbol comes back with no data (for example, a typo or a delisted stock) instead of failing later with a confusing pandas error.
+- **Warns about gaps** when a ticker is missing some closing prices.
+- **Logs** each attempt, retry, and failure with timestamps through Python's `logging` module, for example:
+
+```
+2026-10-14 11:09:51 [WARNING] portfolio_optimizer: Yahoo Finance request failed: 429 Too Many Requests
+2026-10-14 11:09:51 [WARNING] portfolio_optimizer: No data returned; retrying in 2 seconds
+```
+
+Every function has a docstring describing its arguments, return values, and errors.
 
 ## Notes and limitations
 
